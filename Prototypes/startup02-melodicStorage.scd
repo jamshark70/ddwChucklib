@@ -23,15 +23,15 @@ Proto({
 		~analyzeNotes.value(rawMIDI);	// collect stats on chord -- user definable
 		currentEnvironment
 	};
-	
-	~mapToMode = #{ |mode|
+
+	~mapToMode = #{ |mode, scAccidentals(false)|
 		var	bestMode, bestFit = -1e10, bestMap, modeFit, notesTemp, modeObj;
 		mode = mode ? \default; 	// keep symbol for storage
 		modeObj = mode.asMode;
 			// is it a single mode, or a mode pool?
 		if(modeObj.value.size > 0) {
 			modeObj.value.do({ |mode, i|
-				notesTemp = ~notes.mapMode(mode);
+				notesTemp = ~notes.mapMode(mode, scAccidentals);
 				((modeFit = Func(\chModeFit).doAction(notesTemp)) > bestFit).if({
 					bestMode = mode;
 					bestFit = modeFit;
@@ -40,21 +40,21 @@ Proto({
 			});
 			~mode = bestMode;
 			~notes = bestMap;
-			~nextNote = ~nextNote.mapMode(bestMode)
-		}{
-			~notes = ~notes.mapMode(mode);
-			~nextNote = ~nextNote.mapMode(mode);
+			~nextNote = ~nextNote.mapMode(bestMode, scAccidentals)
+		} {
+			~notes = ~notes.mapMode(mode, scAccidentals);
+			~nextNote = ~nextNote.mapMode(mode, scAccidentals);
 			~mode = mode;
 		};
 		currentEnvironment
 	};
-	
-	~mapToMIDI = #{ |mode|
-		~notes = ~notes.unmapMode(mode ?? { ~mode ? \default });
-		~nextNote = ~nextNote.unmapMode(mode ?? { ~mode ? \default });
+
+	~mapToMIDI = #{ |mode, scAccidentals(false)|
+		~notes = ~notes.unmapMode(mode ?? { ~mode ? \default }, scAccidentals);
+		~nextNote = ~nextNote.unmapMode(mode ?? { ~mode ? \default }, scAccidentals);
 		currentEnvironment
 	};
-	
+
 // subclasses must implement:
 //	~analyzeNotes (if needed)
 //	~asPattern
@@ -67,9 +67,9 @@ PR(\abstractModeSeg).v.clone({
 
 		// rhythm profile must act on grace notes before the notes are embedded in the stream
 		// thus, PseqFunc
-		
+
 		// change in ~useRh will take effect only at segment boundaries
-		
+
 	~asNotePattern = #{ |passInValue|
 		var dur, length, rhy, out;
 		out = (passInValue[\useRh] and: { (rhy = passInValue[\rhythmStream]).notNil }).if({
@@ -134,13 +134,13 @@ PR(\melModeSeg).v.clone({
 		~lastNote = temp.last;
 		~firstNote = temp.first;
 		~direction = ~lastNote - ~firstNote;
-		
+
 			// lots of notes shorter than their deltas will drive this metric down
 		~rhythmSustain = ~notes.sum(_.length) / ~notes.sum(_.dur);
 // add repetition factor? how to compute quickly?
-		
+
 		~metric = ~qualities.value.sum;
-		
+
 		currentEnvironment
 	};
 
@@ -154,7 +154,7 @@ PR(\melModeSeg).v.clone({
 PR(\abstractProcess).v.clone({
 	~segProto = \melAdaptSeg;
 	~adaptable = true;		// can specify some segments never to adapt
-	
+
 	~prepare = #{ |notes, nextNote, storage, parms, rawMIDI = true|
 		~segs = List.with(PR(~segProto).v.copy
 			.prepare(notes, nextNote, storage, parms, rawMIDI));
@@ -162,9 +162,9 @@ PR(\abstractProcess).v.clone({
 		~mode = parms.atBackup(\mode, storage) ? \default;
 		currentEnvironment
 	};
-	
+
 	~main = #{  ~segs[0] };
-	
+
 	~addAdapt = #{ |notes, parms, rawMIDI = false|
 			// if there is no mode in parms, use the one given at creation
 		parms[\mode].isNil.if({ parms[\mode] = ~mode });
@@ -172,10 +172,10 @@ PR(\abstractProcess).v.clone({
 			.prepare(notes, ~nextNote, nil, parms, rawMIDI));  // not passing in storage object
 		currentEnvironment
 	};
-	
-	~removeAt = #{ |index| ~segs.removeAt(index) 
+
+	~removeAt = #{ |index| ~segs.removeAt(index)
 	};
-	
+
 	~asPattern = #{ |rhythmProfile|
 		~segs.choose.asPattern(rhythmProfile)
 	};
@@ -183,24 +183,24 @@ PR(\abstractProcess).v.clone({
 	~asNotePattern = #{ |rhythmProfile|
 		~segs.choose.asNotePattern(rhythmProfile)
 	};
-	
+
 	~clearAdapt = #{
 		(~segs.size > 0).if({
 			~segs = List.with(~segs[0]);
 		});
 	};
-	
+
 }, nil, #[\segProto]) => PR(\melSegWithAdapt);
 
 PR(\abstractProcess).v.clone({
 	~segProto = \melSegWithAdapt;
 	~segFunc = \defaultMelSegmenter;
 	~minSegSize = 4;
-	
+
 	~prepare = #{ |notes, nextNote, rawMIDI = true,
 			intervals, avgInterval, avgDelta, storage, parms|
 		var subsegs;
-		
+
 		~parms = parms;	// save for adding variations
 
 			// these are needed to analyze future input materials
@@ -208,7 +208,7 @@ PR(\abstractProcess).v.clone({
 		~avgDelta = avgDelta;
 
 		notes = Func(parms.atBackup(\segFunc, currentEnvironment))
-			.doAction(notes, /*currentEnvironment,*/ nextNote, intervals, 
+			.doAction(notes, /*currentEnvironment,*/ nextNote, intervals,
 				parms.atBackup(\minSegSize, storage, currentEnvironment), parms);
 
 		subsegs = Array.new(notes.size);
@@ -223,11 +223,11 @@ PR(\abstractProcess).v.clone({
 		~mel = subsegs;
 		currentEnvironment
 	};
-	
-	~patternBase = #{ 
+
+	~patternBase = #{
 		Pseq(~mel, 1)
 	};
-	
+
 	~asPattern = #{ |passInValue|
 		~addAdaptCollect.value(~patternBase.value, passInValue, \asPattern)
 	};
@@ -235,7 +235,7 @@ PR(\abstractProcess).v.clone({
 	~asNotePattern = #{ |passInValue|
 		~addAdaptCollect.value(~patternBase.value, passInValue, \asNotePattern)
 	};
-	
+
 	~addAdaptCollect = #{ |pattern, passInValue, asPatSelector = \asPattern|
 		pattern.collect(inEnvir { |seg|
 			passInValue[\adaptProb].coin.if({
@@ -278,13 +278,13 @@ PR(\abstractProcess).v.clone({
 			});
 		});
 	};
-	
+
 	~tryEugenicize = #{ |variantThreshold|
 		var	seg;
 		(seg = ~mel.select({ |seg| seg.mel.size > variantThreshold }).choose)
 			!? { ~eugenicize.value(seg); };
 	};
-	
+
 		// choose worst fit (or oldest) out of source and kill it
 		// ok to have this in phrase b/c it doesn't involve adapt material
 	~eugenicize = #{ |source, passInValue|
@@ -308,10 +308,10 @@ PR(\abstractProcess).v.clone({
 			source.removeAt(1)
 		});
 	};
-	
+
 		// returns flat array of original segments -- used for adaptation
 	~asSegArray = #{  ~mel.collect({ |seg| seg.segs[0] }) };
-	
+
 	~clearAdapt = #{
 		~mel.do(_.clearAdapt);
 		~adaptMel = nil;
@@ -333,20 +333,20 @@ Proto({
 	~adaptProb = 1; //0.4;
 	~variantThreshold = 4;	// when more than 4 variants, drop some; see ~eugenicize
 	~useRh = false;
-	
+
 		// these are keys that will be chucked into BP but need to be passed into mel
 		// range is used for eug testing: NumericRange(lo, hi)
 	~keysFromParent = #[\mode, \rhythmStream, \adaptStream, \adaptProb,
 		\variantThreshold, \repeats, \preSplitFunc, \useRh, \adTest, \eugTest, \splitFunc,
 		\resetSeg, \resetPhr, \range];
-	
+
 	~repeats = inf;
 	~adaptPattern = \absSplice;		// this may be a pattern
 
 	~preSplitFunc = #{ |notes| notes };
 
 	~clearParms = { ~parms = nil; };
-	
+
 	~prepareSequence = #{ |key, buf, storage, parms|
 			// maintain an aggregate of passed-in parameters
 		~parms = (~parms ?? { () }).putAll(parms);
@@ -379,8 +379,8 @@ Proto({
 
 			// return value
 		notes.collect({ |phrNotes, i|
-			PR(~segProto).v.copy.prepare(phrNotes, 
-				(i == (notes.size-1)).if({ notes[0][0] }, { notes[i+1][0] }), 
+			PR(~segProto).v.copy.prepare(phrNotes,
+				(i == (notes.size-1)).if({ notes[0][0] }, { notes[i+1][0] }),
 				true, intervals, ~avgInterval, ~avgDelta, storage, parms)
 		});
 	};
@@ -396,7 +396,7 @@ Proto({
 				phr.mel.collect({ |seg, i| seg.main })
 			}).flat;
 	};
-	
+
 	~clearAdapt = #{
 		~adapt = nil;
 		~mel.do(_.clearAdapt);
@@ -407,7 +407,7 @@ Proto({
 		passInValue = passInValue ?? { ~passInValue };
 		~phrPattern = Pseq(~mel, passInValue[\repeats] ? inf)
 	};
-	
+
 		// run each melody segment successively
 	~asSegPattern = #{ |asPatSelector, passInValue|
 		passInValue = passInValue ?? { ~passInValue };
@@ -420,7 +420,7 @@ Proto({
 			});
 		});
 	};
-	
+
 	~asSegStream = #{ |asPatSelector, passInValue|
 		passInValue = passInValue ?? { ~passInValue };
 		(~segStream.isNil or: { passInValue[\resetPhr] ? true }).if({
