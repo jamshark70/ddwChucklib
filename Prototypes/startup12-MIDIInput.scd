@@ -28,7 +28,7 @@ PR(\abstractMIDIInput).v.clone({
 		~parser = MelodyParser(nil, currentEnvironment, socket, ~child.clock)
 	};
 
-	~midiCleanup = #{ 
+	~midiCleanup = #{
 		var	bp = BP(~collIndex), buf, quant;
 		bp.unwrap(false);
 			// insert your own processing here -- parsing, quantization
@@ -45,7 +45,7 @@ PR(\abstractMIDIInput).v.clone({
 			});
 		});
 	};
-	
+
 	~melNoteOn = #{ |note|
 		~child.eventStreamPlayer.stop;
 			// save this note -- when a note is released, this goes into that event
@@ -79,6 +79,7 @@ PR(\melMIDI).v.clone({
 
 PR(\abstractMIDIInput).v.clone({
 	~defaultMIDIType = \ch;
+	~scAccidentals = false;
 	~preparePlay = #{  currentEnvironment };
 	~getMIDIParser = #{ |socket|
 		~parser = ChordParser(nil, currentEnvironment, socket, ~child.clock,
@@ -96,7 +97,7 @@ PR(\abstractMIDIInput).v.clone({
 	};
 	~preparePlayEvent = #{ |note|
 		~child.eventStream.next(~child.event.copy)
-			.put(\chNotes, note.mapMode(~child.mode))
+			.put(\chNotes, note.mapMode(~child.mode, ~scAccidentals))
 			.put(\length, inf)		// child should not cut off on its own
 			.put(\midi, false)		// this only works on mapped data
 			.play;
@@ -111,6 +112,7 @@ PR(\abstractMIDIInput).v.clone({
 
 PR(\melMIDI).v.clone({
 	~defaultMIDIType = \mel;	// chord processes place mel into topNote
+	~scAccidentals = false;
 	~preparePlayEvent = #{ |note|
 		var	mode = ~parser.recSocket.buf.properties.tryPerform(\at, \mode) ?? { ~child.mode ? \default };
 		~melNoteOff.(note);	// polyphony is not allowed
@@ -118,7 +120,7 @@ PR(\melMIDI).v.clone({
 			.put(\delta, 0.1)
 			.put(\length, inf)
 			.put(\immediateOSC, true)
-			.put(\top, (note: note.copy.mapMode(mode), mode: mode))
+			.put(\top, (note: note.copy.mapMode(mode, ~scAccidentals), mode: mode))
 			.put(\midi, false)
 			.play;
 	};
@@ -128,7 +130,7 @@ PR(\melMIDI).v.clone({
 		var	currentChord = ~child.child.currentChord, notes;
 		currentChord.notNil.if({
 			notes = currentChord.lastFitNotes.asFloat
-				.unmapMode(currentChord.modeForEvent(~child.lastEvent));
+				.unmapMode(currentChord.modeForEvent(~child.lastEvent), ~scAccidentals);
 			(~lastMIDINoteOn == note.asFloat).if({
 				~child.child.event.copy
 					.put(\freq, notes)
@@ -144,15 +146,15 @@ PR(\melMIDI).v.clone({
 PR(\chMIDI).v.clone({
 	~preparePlayEvent = #{ |note|
 		~child.eventStream.next(~child.event.copy)
-			.put(\chNotes, note.mapMode(~child.mode))
-			.put(\top, note.maxItem.postln.mapMode(~child.mode).postln)
+			.put(\chNotes, note.mapMode(~child.mode, ~scAccidentals))
+			.put(\top, note.maxItem.postln.mapMode(~child.mode, ~scAccidentals).postln)
 			.put(\length, inf)		// child should not cut off on its own
 			.put(\midi, false)		// this only works on mapped data
 			.put(\getChord, false)
 			.play;
 	};
 
-	~midiCleanup = #{ 
+	~midiCleanup = #{
 		var	bp, buf;
 		bp = BP(~collIndex);
 		bp.unwrap(false);
@@ -163,7 +165,7 @@ PR(\chMIDI).v.clone({
 		bp.stopNow;
 		bp.play(~replayTimeSpec.applyLatency(bp.latency), doReset:true);
 	};
-	
+
 }) => PR(\chmelMIDI);
 
 AbstractChuckArray.defaultSubType = saveSubType;

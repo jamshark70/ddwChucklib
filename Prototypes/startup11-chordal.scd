@@ -58,7 +58,7 @@ PR(\abstractModeSeg).v.clone({
 		currentEnvironment
 	};
 
-	~mapToMode = #{ |mode|
+	~mapToMode = #{ |mode, scAccidentals(false)|
 		var	bestMode, bestFit = -1e10, bestMap, modeFit, notesTemp/*, modeObj*/;
 			// is it a single mode, or a mode pool?
 		mode = mode ? \default;
@@ -66,7 +66,7 @@ PR(\abstractModeSeg).v.clone({
 		if(mode.size > 0) {
 			mode.value.do({ |mode, i|
 				mode = mode.asMode;
-				notesTemp = ~rawNotes.mapMode(mode);
+				notesTemp = ~rawNotes.mapMode(mode, scAccidentals);
 				((modeFit = Func(\chModeFit).doAction(notesTemp)) > bestFit).if({
 					bestMode = mode;
 					bestFit = modeFit;
@@ -75,15 +75,15 @@ PR(\abstractModeSeg).v.clone({
 			});
 			~mode = bestMode;
 			~notes = bestMap;
-		}{
-			~notes = ~notes.mapMode(mode);
+		} {
+			~notes = ~notes.mapMode(mode, scAccidentals);
 			~mode = mode;
 		};
 		currentEnvironment
 	};
 
-	~mapToMIDI = #{ |mode|
-		~notes = ~notes.unmapMode(mode);
+	~mapToMIDI = #{ |mode, scAccidentals(false)|
+		~notes = ~notes.unmapMode(mode, scAccidentals);
 		currentEnvironment
 	};
 
