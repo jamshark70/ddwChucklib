@@ -514,9 +514,11 @@ stretch: 1.0,
 // maybe you want to use non-equal-temperament. override this func
 // or, if you are using modally-mapped values, include the cpsFunc or EqualTemperament derivative
 // in the ModalSpec itself
+detuner: #{ |freqs| 1 },  // calculate a number or array to multiply freq by
 midiNoteToFreq: #{ |notenum|
-	~mode.notNil.if({ ~mode.asMode.cpsFunc.value(notenum) },
+	var out = ~mode.notNil.if({ ~mode.asMode.cpsFunc.value(notenum) },
 		{ notenum.midicps });
+	out * ~detuner.(out)
 },
 sustain: { ~length.value },
 
