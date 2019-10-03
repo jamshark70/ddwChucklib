@@ -516,7 +516,7 @@ stretch: 1.0,
 // in the ModalSpec itself
 detuner: #{ |freqs| 1 },  // calculate a number or array to multiply freq by
 midiNoteToFreq: #{ |notenum|
-	var out = ~mode.notNil.if({ ~mode.asMode.cpsFunc.value(notenum) },
+	var out = ~mode.notNil.if({ ~mode.asMode.cpsOfKey(notenum) },
 		{ notenum.midicps });
 	out * ~detuner.(out)
 },
