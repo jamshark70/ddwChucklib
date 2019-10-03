@@ -20,8 +20,8 @@ PR(\abstractProcess).v.clone({
 		});
 		currentEnvironment
 	};
-	
-	~asNotePattern = { 
+
+	~asNotePattern = {
 		// Pfunc is roughly 6.7 times SLOWER than Prout
 		Prout({ |inval|
 			~repeats.do {
@@ -33,8 +33,8 @@ PR(\abstractProcess).v.clone({
 			};
 		});
 	};
-	
-	~asPattern = #{ 
+
+	~asPattern = #{
 		Pbind([\note, \delta], ~asNotePattern.value.collect({ |n| [n, n.dur] }));
 	};
 }, nil, #[\requiredKeys]) => PR(\mel1);
@@ -55,7 +55,7 @@ PR(\abstractProcess).v.clone({
 	~variantThreshold = 4;	// when more than 4 variants, drop some; see ~eugenicize
 	~splitFunc = \noSplit;	// specify using buf.chuck(aBP, mel, (splitFunc: \xxx))
 	~defaultMIDIType = \mel;
-	
+
 	~newMelFlag = false;	// internal flag: when a new melody is given, this becomes true
 
 	~acceptMIDIBuf = #{ |buf, adverb, parms|
@@ -74,7 +74,7 @@ PR(\abstractProcess).v.clone({
 		parms.keysValuesDo({ |k, v|
 			v.notNil.if({ currentEnvironment.put(k, v) });
 		});
-		
+
 			// get the proper action, either from supplied adverb or buf type
 		adverb = adverb ?? { parms[\type] ? \mel };
 
@@ -88,16 +88,16 @@ PR(\abstractProcess).v.clone({
 			});
 		}, {
 			~rhythm = ~rhythmPrepareSequence.value(buf, parms);
-		});			
+		});
 
 			// populate rhythm profile if there isn't one and I'm receiving a melody
 		(~rhythmProfileProto.notNil and: ~rhythm.isNil and: (adverb == \mel)).if({
 			~rhythm = ~rhythmPrepareSequence.value(buf, parms);
 		});
-		
+
 		currentEnvironment
 	};
-	
+
 		// should always return a new mel object, but should keep adapt (and other stuff?)
 		// why always a new object? -- to save mel and reuse it
 	~melPrepareSequence = #{ |buf, parms|
@@ -111,7 +111,7 @@ PR(\abstractProcess).v.clone({
 		~newMelFlag = true;
 		~mel
 	};
-	
+
 		// add adaptation data to current melody if it exists
 	~adaptPrepareSequence = #{ |buf, parms|
 		~mel.isNil.if({
@@ -119,15 +119,15 @@ PR(\abstractProcess).v.clone({
 		});
 		~mel.prepareSequence(\adapt, buf, currentEnvironment, parms);
 	};
-	
+
 	~rhythmPrepareSequence = #{ |buf, parms|
 			// create a new rhythm profiler only if needed
 		(~rhythm ?? { PR(~rhythmProfileProto).v.copy })
 			.prepare(buf, ~getPassInValue.(PR(~rhythmProfileProto).v.keysFromParent, false),
 				parms, currentEnvironment)
 	};
-	
-	~dumpSegments = { 
+
+	~dumpSegments = {
 		~mel.mel.do({ |phr, i|
 			"Phrase %\n".postf(i);
 			phr.mel.do({ |seg, j|
@@ -144,19 +144,19 @@ PR(\abstractProcess).v.clone({
 			$\n.post;
 			$\n.post;
 		});
-	};				
-	
+	};
+
 // potential problem: do some numeric parms belong to melodyStorage?
 // yes: repeats, adaptProb, eugenicizeProb, variantThreshold, rhythmQuant
 	~bindSimpleNumber = #{ |num, adverb|
 		adverb.envirPut(num);
 	};
-	
+
 	~clearAdapt = #{
 		~mel.clearAdapt;
 	};
 
-	~getMode = #{  ~mode ? \default };
+	~getMode = #{ ~mode ? \default };
 	~mode_ = #{ |mode|
 		mode = mode.tryPerform(\collIndex) ? mode ? \default;  // pass a symbol in as the mode
 		currentEnvironment.put(\mode, mode);
@@ -164,7 +164,7 @@ PR(\abstractProcess).v.clone({
 		~event.put(\mode, ~mode.value);
 		currentEnvironment
 	};
-	
+
 // function test breaks the possibility of passing a function as such
 	~getPassInValue = #{ |keys, save = false|
 		var	out;
@@ -175,8 +175,8 @@ PR(\abstractProcess).v.clone({
 		(save ? false).if({ ~passInValue = out; });
 		out
 	};
-	
-	~asPattern = #{ 
+
+	~asPattern = #{
 		var rhythm;
 		~event.put(\mode, ~mode.value);  // ensure event knows its mode
 		~rhythmStream = ~rhythm.asPattern.asStream;
@@ -252,7 +252,7 @@ PR(\abstractProcess).v.clone({
 				});
 			});
 		})
-	};		
+	};
 
 	~bindPatDefault = \adapt;
 }) => PR(\aiMel);
@@ -275,7 +275,7 @@ PR(\aiMel).v.clone({
 	~bassIDStream = \currentBassNote;
 
 		// ProtoEvent(\voicerNote) issues the dependency notification
-	~asPattern = #{ 
+	~asPattern = #{
 		~asBasePattern.value
 			.collect(inEnvir { |ev| ev.put(\bassID, ~bassIDStream.next(ev)) });
 	};
