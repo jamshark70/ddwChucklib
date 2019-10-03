@@ -1614,7 +1614,8 @@ BP : AbstractChuckNewDict {
 		// to be stored in play event
 		// assumes we're in the environment already
 	propagateDownFunc {
-		^#{	~child.notNil.if({
+		^#{
+			~child.notNil.if({
 				~child.event[\allKeysToPropagate].do({ |key|
 					~child.event.put(key, key.envirGet);
 				});
@@ -1905,15 +1906,18 @@ MCG : AbstractChuckArray {
 // make sure Mode(\default) is populated!
 Mode : AbstractChuckNewDict {
 	bindModalSpec { |mode|
-		value = mode
+		value = mode;
+		this.changed(\modeChanged, value);
 	}
 
 	bindArray { |modeNames|
 		value = modeNames;  // .collect({ |name| Mode(name).v });
+		this.changed(\modeChanged, value.collect({ |name| Mode(name).v }));
 	}
 
 	bindSymbol { |modeName|
 		value = Mode(modeName).copy;
+		this.changed(\modeChanged, value.value);
 	}
 
 	asMode { ^this }
