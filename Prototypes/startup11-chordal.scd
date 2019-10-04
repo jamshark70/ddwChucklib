@@ -48,17 +48,18 @@ PR(\abstractModeSeg).v.clone({
 		// by default, use the mode of the calling event
 		// set to true to force the notes to play back using the mode analyzed here
 	~useOwnMode = false;
-	~prepare = #{ |notes, mode, rawMIDI = true, parms|
+	~prepare = #{ |notes, mode, rawMIDI = true, parms, bufParms|
 			// notes should be in the format [note, note, note]
 		~rawNotes = ~notes = notes.asArray;
 		~rawMIDI = rawMIDI ? true;
-		~rawMIDI.if({ ~mapToMode.value(mode) });
+		// this is probably going to break something
+		~rawMIDI.if({ ~mapToMode.value(bufParms.atBackup(\mode, parms) ?? { mode }, mode) });
 		~analyzeNotes.value(~rawMIDI);	// collect stats on chord -- user definable
 		~useOwnMode = parms.atBackup(\useOwnMode, currentEnvironment);
 		currentEnvironment
 	};
 
-	~mapToMode = #{ |mode, scAccidentals(false)|
+	~mapToMode = #{ |mode, setMode, scAccidentals(false)|
 		var	bestMode, bestFit = -1e10, bestMap, modeFit, notesTemp/*, modeObj*/;
 			// is it a single mode, or a mode pool?
 		mode = mode ? \default;
@@ -77,7 +78,7 @@ PR(\abstractModeSeg).v.clone({
 			~notes = bestMap;
 		} {
 			~notes = ~notes.mapMode(mode, scAccidentals);
-			~mode = mode;
+			~mode = setMode;
 		};
 		currentEnvironment
 	};
@@ -259,7 +260,9 @@ PR(\abstractProcess).v.clone({
 				// true = unmap notes to mode
 			PR(~chordProto).v.copy.prepare(ch.asNoteArray,
 				mode,
-				parms.tryPerform(\at, \rawMIDI) ? true, parms)
+				parms.tryPerform(\at, \rawMIDI) ? true, parms,
+				buf.properties
+			)
 		})
 	};
 	~modeForChordObjects = { |buf, parms|
