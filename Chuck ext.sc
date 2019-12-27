@@ -115,12 +115,12 @@
 		^Mode(this) ?? { Mode(\default) }
 	}
 
-	prMap { |degree|
-		^this.asMode.prMap(degree)
+	prMap { |degree, scAccidentals = false|
+		^this.asMode.prMap(degree, scAccidentals)
 	}
 
-	prUnmap { |key|
-		^this.asMode.prUnmap(key)
+	prUnmap { |key, scAccidentals = false|
+		^this.asMode.prUnmap(key, scAccidentals)
 	}
 
 	isValidIDictKey { ^true }
