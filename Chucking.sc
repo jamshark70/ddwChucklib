@@ -118,6 +118,7 @@ AbstractChuckArray {
 		classHooks.at(this.class, \free).value(collIndex, this);
 		this.class.collection[collIndex] = nil;
 		ChuckableBrowser.updateGui(this.class);
+		this.changed(\didFree);
 	}
 
 		// for objects that don't do anything special on free
@@ -307,6 +308,7 @@ AbstractChuckDict : AbstractChuckArray {
 		classHooks.at(this.class, \free).value(collIndex, this);
 		this.class.collection.removeAt(collIndex);
 		ChuckableBrowser.updateGui(this.class);
+		this.changed(\didFree);
 	}
 
 	*collectionType { ^IdentityDictionary }
