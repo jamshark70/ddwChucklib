@@ -165,25 +165,46 @@ SynthDescLib.all[\ddwSynths].synthDescs.do({ |desc|
 });
 
 
-// Initially my idea is that the user would be responsible for sending the defs
-// to the server when needed. But this broke too many of my tracks,
-// so I'm adding a dependant to servers to send the synthdefs on boot.
-// Feel free to comment this out if you don't like it.
+// // Initially my idea is that the user would be responsible for sending the defs
+// // to the server when needed. But this broke too many of my tracks,
+// // so I'm adding a dependant to servers to send the synthdefs on boot.
+// // Feel free to comment this out if you don't like it.
+//
+// // Note also, sending a synthdef from the SynthDescLib does NOT work
+// // if the SynthDesc was read from a .scsyndef file.
+// // These are memStore'd so it's OK.
+//
+// Updater(Server, { |obj, what, newServer|
+// 	if(what == \serverAdded) {
+// 		Updater(newServer, { |obj, what|
+// 			if(what == \serverRunning and: { obj.serverRunning }) {
+// 				SynthDescLib.all[\ddwSynths].synthDescs.do({ |desc|
+// 					desc.def.send(obj);
+// 				});
+// 			};
+// 		});
+// 	};
+// });
+//
+// Server.named.do({ |svr| Server.changed(\serverAdded, svr) });
 
-// Note also, sending a synthdef from the SynthDescLib does NOT work
-// if the SynthDesc was read from a .scsyndef file.
-// These are memStore'd so it's OK.
 
-Updater(Server, { |obj, what, newServer|
-	if(what == \serverAdded) {
-		Updater(newServer, { |obj, what|
-			if(what == \serverRunning and: { obj.serverRunning }) {
-				SynthDescLib.all[\ddwSynths].synthDescs.do({ |desc|
-					desc.def.send(obj);
-				});
-			};
-		});
+// not related to synthdefs: curve factor computer
+{ |minval, midval, maxval|
+	var a, b, c, sqrterm, qresult, sgn = sign(maxval - minval);
+	// the formula is unstable just above the average of minval and maxval
+	// so mirror the midval around the average
+	if(midval > ((maxval + minval) * 0.5)) {
+		midval = minval + maxval - midval;
+		sgn = sgn.neg;
 	};
-});
-
-Server.named.do({ |svr| Server.changed(\serverAdded, svr) });
+	a = midval - minval;
+	b = minval - maxval;
+	c = maxval - midval;
+	sqrterm = sqrt(b.squared - (4 * a * c));
+	if(((qresult = (sqrterm - b) / (2 * a))).abs != 1) {
+		log(qresult.squared).abs * sgn
+	} {
+		log(((b.neg - sqrterm) / (2 * a)).squared).abs * sgn
+	};
+} => Func(\curveFactor);

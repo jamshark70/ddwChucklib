@@ -325,10 +325,13 @@ AbstractChuckArray.defaultSubType = \chordFit;
 		Func(\getValuesFromEvent).doAction(source, inEvent);
 
 	fitness = resultList.collect({ |ch, i|
-		[i, Func(\chPitchFit).doAction(ch, top, root, mode, fitFactors)]
+		var out = [i, Func(\chPitchFit).doAction(ch, top, root, mode, fitFactors)];
+		// ([ch] ++ out).debug("try " ++ i);
+		out
 	});  // .sort({ |a, b| a[1] > b[1] });
 	// and the winner is...
 	fitness = fitness.maxItem { |pair| pair[1] };
+	// ([resultList[fitness[0]]] ++ fitness).debug("winner");
 
 		// output
 		// dur and length should be replaced by microrhythm
@@ -374,10 +377,11 @@ AbstractChuckArray.defaultSubType = \chordFit;
 
 { |current, intervals, resultList|
 	var	tempIntervals;
+	// [current, intervals].debug(">> traverse");
 	(intervals.size > 0).if({
 			// removeDups because it isn't necessary to process the same interval
 			// multiple times in the same recursion level
-		intervals.removeDups.do({ |interval|
+		intervals.removeDups/*.debug("pruned")*/.do({ |interval|
 			(tempIntervals = intervals.copy).remove(interval);
 			Func(\traverseIntervalTree).doAction(current.copy.add(current.last + interval),
 				tempIntervals, resultList);
@@ -385,6 +389,7 @@ AbstractChuckArray.defaultSubType = \chordFit;
 	}, {
 		resultList.add(current)
 	});
+	// [current, intervals].debug("<< traverse");
 } => Func(\traverseIntervalTree);
 
 

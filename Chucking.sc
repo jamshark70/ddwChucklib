@@ -379,10 +379,20 @@ VC : AbstractChuckNewDict {
 			// in the environment
 		value = env[\value];
 		subType = fact.subType;
-		env[\error].notNil.if({		// oops, something bad happened
+		// synchronous init, need to broadcast completion
+		// asynchronous, factory is responsible
+		// this is for presets, where globalcontrol values need to be set
+		// but globalcontrols may not be synchronously available
+		if(env[\async] != true) {
+			env[\vcIsReady] = true;
+			this.changed(\vcReady, collIndex);
+		};
+		if(env[\error].notNil) {	// oops, something bad happened
 			"Error occurred while making %. Backtrace is available at %.env.backtrace."
 				.format(fact, this).warn;
-		});
+		} {
+			env[\postAction].value(this);
+		};
 	}
 
 	free {
@@ -1705,14 +1715,15 @@ BP : AbstractChuckNewDict {
 	}
 
 	asMixer { |key(\chan)|  // 'key' is for adverb support: BP(\name) =>.key MCG(0)
-		var mixer;
+		var mixer, event;
 		if(this.exists) {
 			if(value[key].isMixerChannel) { ^value[key] };
 			// try default mixer key
 			if(key != \chan and: { value[\chan].isMixerChannel }) { ^value[\chan] };
 			// try voicer
-			if(value[\event][\voicer].notNil) {
-				mixer = value[\event][\voicer].bus.asMixer;
+			event = value[\event];
+			if(event.notNil and: { event[\voicer].notNil }) {
+				mixer = event[\voicer].bus.asMixer;
 				if(mixer.notNil) { ^mixer };
 			};
 			Error("Could not find a MixerChannel for BP(%)".format(collIndex.asCompileString)).throw;

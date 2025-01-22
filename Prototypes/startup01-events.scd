@@ -526,12 +526,21 @@ scAccidentals: false,
 
 prepNote: #{
 	var i, args, argval, thisEvent = currentEnvironment;
+	var adj = 1, octaveRatio;
+	~mode = ~mode.asMode;
 	~newFreq = ~freq ?? { ~note.asFloat };
 	~mtranspose.notNil.if({ ~newFreq = ~newFreq + ~mtranspose });
-	(~midi ? false).not.if({ ~newFreq = ~newFreq.unmapMode(~mode.asMode, ~scAccidentals) });
+	(~midi ? false).not.if({ ~newFreq = ~newFreq.unmapMode(~mode, ~scAccidentals) });
 	~ctranspose.notNil.if({ ~newFreq = ~newFreq + ~ctranspose });
 
-	~newFreq = ~midiNoteToFreq.value(~newFreq).asArray;
+	if(~tuning.notNil) {
+		adj = ~tuning.wrapAt(~newFreq);  // adjusted semitones
+		adj = adj - adj.round;
+		octaveRatio = ~tuning.tryPerform(\octaveRatio) ?? { 2 };
+		adj = octaveRatio ** (adj / ~tuning.size);
+	};
+
+	~newFreq = (adj * ~midiNoteToFreq.value(~newFreq)).asArray;
 	~dur = ~dur ?? { ~delta ?? { ~note.dur } };
 	~length = (~length ?? { ~note.length }).asArray;
 
@@ -809,7 +818,7 @@ ProtoEvent(\melWrap).v.copy.make({
 	// should only be called inside the event
 	~wrapPattern = #{ |pattern|
 		var dur;
-		if(~length != inf) {
+		if(~runOn != true and: { ~length != inf }) {
 			dur = ~length - 0.01;
 			Prout { |inval|
 				var stream = pattern.asStream,
