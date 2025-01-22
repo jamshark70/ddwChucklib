@@ -1384,7 +1384,7 @@ BP : AbstractChuckNewDict {
 					if(routine === value[\eventStream]) {
 						defer {
 							this.stopNow;  // set the BP's state
-							this.reset;    // and, clear the error condition for next time
+							this.reset(error);  // and, clear the error condition for next time
 						};
 					};
 				}).asStream;
@@ -1483,13 +1483,14 @@ BP : AbstractChuckNewDict {
 		// re-pattern, and restart stream if playing
 		// should I follow the naming convention of stopNow / stop?
 		// would break code
-	reset {
+	reset { |error|
 		var	oldPlayer; // , oldUpdater;
 		this.exists.if({
 			(oldPlayer = value[\eventStreamPlayer]).notNil.if({
 				value[\eventStreamPlayerWatcher].remove;
 			});
-			value.reset;
+			value[\eventStreamPlayer] = nil;  // old stream died, force a new one next time
+			value.reset(error);
 			this.prepareForPlay(doReset:true);
 			this.isPlaying.if({
 				value[\eventStreamPlayer].play(this.clock, false, AbsoluteTimeSpec(oldPlayer.nextBeat));
